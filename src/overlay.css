@@ -1,0 +1,29 @@
+/* ===================================================
+   Overlay window — transparent background
+   Must override index.css / tailwind preflight
+   which sets html,body,#root{background:var(--bg-base)}.
+   =================================================== */
+*, *::before, *::after {
+  background: transparent !important;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  border: none !important;
+}
+
+#root {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}

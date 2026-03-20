@@ -4,7 +4,7 @@
  */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import './overlay.css'
 import { CrosshairOverlayApp } from './CrosshairOverlayApp'
 
 createRoot(document.getElementById('root')!).render(

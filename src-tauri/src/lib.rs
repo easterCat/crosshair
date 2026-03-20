@@ -69,6 +69,7 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
     .title("CrosshairOverlay")
     .fullscreen(true)
     .decorations(false)
+    .transparent(true)
     .always_on_top(true)
     .skip_taskbar(true)
     .resizable(false)
