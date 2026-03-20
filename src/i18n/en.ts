@@ -1,0 +1,62 @@
+export const en = {
+  app: {
+    title: 'CrosshairOverlay',
+    version: 'v0.1.0',
+    tagline: 'Lightweight crosshair overlay for games',
+  },
+  status: {
+    active: 'ACTIVE',
+    hidden: 'HIDDEN',
+  },
+  buttons: {
+    show: 'Show',
+    hide: 'Hide',
+    tray: 'Tray',
+  },
+  shortcuts: {
+    title: 'Shortcuts',
+    toggle: 'Toggle',
+    settings: 'Settings',
+    next: 'Next',
+    prev: 'Prev',
+  },
+  tabs: {
+    presets: 'Presets',
+    customize: 'Customize',
+  },
+  presets: {
+    builtin: 'Built-in',
+    custom: 'Custom',
+    stylesCount: '{count} styles',
+    savedCount: '{count} saved',
+    createCustom: 'Create Custom Preset',
+    deletePreset: 'Delete preset',
+  },
+  footer: {
+    presetsCount: '{count} presets · Built with Tauri v2',
+    platforms: 'macOS · Windows · Linux',
+  },
+  panel: {
+    style: 'Style',
+    color: 'Color',
+    dimensions: 'Dimensions',
+    visual: 'Visual',
+    animation: 'Animation',
+    size: 'Size',
+    thickness: 'Thickness',
+    gap: 'Gap',
+    opacity: 'Opacity',
+    rotation: 'Rotation',
+    outline: 'Outline',
+    outlineDesc: 'Dark border around crosshair',
+    pulseEffect: 'Pulse Effect',
+    pulseDesc: 'Breathing / fade animation',
+    speed: 'Speed',
+    customName: "Name your custom preset...",
+    saveCustom: 'Save Custom Preset',
+    custom: 'Custom',
+  },
+  tray: {
+    minimizeToTray: 'Minimize to system tray',
+  },
+};

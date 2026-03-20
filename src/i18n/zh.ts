@@ -1,0 +1,62 @@
+export const zh = {
+  app: {
+    title: 'CrosshairOverlay',
+    version: 'v0.1.0',
+    tagline: '轻量级游戏准星悬浮窗',
+  },
+  status: {
+    active: '已显示',
+    hidden: '已隐藏',
+  },
+  buttons: {
+    show: '显示',
+    hide: '隐藏',
+    tray: '最小化',
+  },
+  shortcuts: {
+    title: '快捷键',
+    toggle: '切换',
+    settings: '设置',
+    next: '下一个',
+    prev: '上一个',
+  },
+  tabs: {
+    presets: '预设',
+    customize: '自定义',
+  },
+  presets: {
+    builtin: '内置',
+    custom: '自定义',
+    stylesCount: '{count} 种样式',
+    savedCount: '{count} 个已保存',
+    createCustom: '创建自定义预设',
+    deletePreset: '删除预设',
+  },
+  footer: {
+    presetsCount: '{count} 个预设 · Tauri v2 构建',
+    platforms: 'macOS · Windows · Linux',
+  },
+  panel: {
+    style: '样式',
+    color: '颜色',
+    dimensions: '尺寸',
+    visual: '外观',
+    animation: '动画',
+    size: '大小',
+    thickness: '粗细',
+    gap: '间隙',
+    opacity: '透明度',
+    rotation: '旋转',
+    outline: '描边',
+    outlineDesc: '准星周围的深色边框',
+    pulseEffect: '脉冲效果',
+    pulseDesc: '呼吸/渐变动画',
+    speed: '速度',
+    customName: '输入自定义预设名称...',
+    saveCustom: '保存自定义预设',
+    custom: '自定义',
+  },
+  tray: {
+    minimizeToTray: '最小化到系统托盘',
+  },
+};

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { CrosshairConfig, CrosshairStyle } from '../types/crosshair';
 import { CrosshairCanvas } from './CrosshairCanvas';
+import type { Translations } from '../i18n';
 
 const STYLES: { value: CrosshairStyle; label: string }[] = [
   { value: 'cross',        label: 'Cross' },
@@ -32,9 +33,10 @@ interface SettingsPanelProps {
   config: CrosshairConfig;
   onChange: (updates: Partial<CrosshairConfig>) => void;
   onSaveAsPreset: () => void;
+  t: Translations;
 }
 
-export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPanelProps) {
+export function SettingsPanel({ config, onChange, onSaveAsPreset, t }: SettingsPanelProps) {
   const [presetName, setPresetName] = useState('');
 
   // Slider component for consistent look
@@ -127,8 +129,8 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
         </div>
         {/* Crosshair name + style badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-            {config.name || 'Custom'}
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            {config.name || t.panel.custom}
           </span>
           <span style={{
             fontSize: 10, fontWeight: 600,
@@ -143,7 +145,7 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
 
       {/* ── Style ───────────────────────────────────────── */}
       <Section
-        title="Style"
+        title={t.panel.style}
         icon={<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="4" height="4" rx="1" fill="currentColor"/><rect x="7" y="1" width="4" height="4" rx="1" fill="currentColor"/><rect x="1" y="7" width="4" height="4" rx="1" fill="currentColor"/><rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/></svg>}
       >
         <div style={{
@@ -194,7 +196,7 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
 
       {/* ── Color ───────────────────────────────────────── */}
       <Section
-        title="Color"
+        title={t.panel.color}
         icon={<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><circle cx="6" cy="6" r="2" fill="currentColor"/></svg>}
       >
         {/* Swatches */}
@@ -268,27 +270,27 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
 
       {/* ── Dimensions ──────────────────────────────────── */}
       <Section
-        title="Dimensions"
+        title={t.panel.dimensions}
         icon={<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M6 1v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>}
       >
-        <Slider label="Size" value={config.size} min={4} max={80} unit="px"
+        <Slider label={t.panel.size} value={config.size} min={4} max={80} unit="px"
           onChange={v => onChange({ size: v })} />
-        <Slider label="Thickness" value={config.thickness} min={1} max={10} step={0.5} unit="px" decimal
+        <Slider label={t.panel.thickness} value={config.thickness} min={1} max={10} step={0.5} unit="px" decimal
           onChange={v => onChange({ thickness: v })} />
         {config.style === 'gap-cross' && (
-          <Slider label="Gap" value={config.gap} min={0} max={20} unit="px"
+          <Slider label={t.panel.gap} value={config.gap} min={0} max={20} unit="px"
             onChange={v => onChange({ gap: v })} />
         )}
       </Section>
 
       {/* ── Visual ──────────────────────────────────────── */}
       <Section
-        title="Visual"
+        title={t.panel.visual}
         icon={<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>}
       >
-        <Slider label="Opacity" value={config.opacity} min={0.1} max={1} step={0.05} unit="%" decimal
+        <Slider label={t.panel.opacity} value={config.opacity} min={0.1} max={1} step={0.05} unit="%" decimal
           onChange={v => onChange({ opacity: v })} />
-        <Slider label="Rotation" value={config.rotation} min={0} max={360} step={5} unit="°"
+        <Slider label={t.panel.rotation} value={config.rotation} min={0} max={360} step={5} unit="°"
           onChange={v => onChange({ rotation: v })} />
 
         {/* Outline toggle */}
@@ -300,8 +302,8 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
           border: '1px solid var(--border-default)',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>Outline</span>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Dark border around crosshair</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>{t.panel.outline}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.panel.outlineDesc}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {config.outline && (
@@ -318,7 +320,7 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
 
       {/* ── Animation ───────────────────────────────────── */}
       <Section
-        title="Animation"
+        title={t.panel.animation}
         icon={<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" fill="currentColor"/><path d="M6 2a4 4 0 0 1 0 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 2"/></svg>}
       >
         <div style={{
@@ -329,14 +331,14 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
           border: '1px solid var(--border-default)',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>Pulse Effect</span>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Breathing / fade animation</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>{t.panel.pulseEffect}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.panel.pulseDesc}</span>
           </div>
           <input type="checkbox" checked={config.animated}
             onChange={e => onChange({ animated: e.target.checked })} />
         </div>
         {config.animated && (
-          <Slider label="Speed" value={config.animationSpeed} min={0.5} max={5} step={0.5} decimal
+          <Slider label={t.panel.speed} value={config.animationSpeed} min={0.5} max={5} step={0.5} decimal
             onChange={v => onChange({ animationSpeed: v })} />
         )}
       </Section>
@@ -353,7 +355,7 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
           type="text"
           value={presetName}
           onChange={e => setPresetName(e.target.value)}
-          placeholder="Name your custom preset..."
+          placeholder={t.panel.customName}
           maxLength={32}
           style={{
             width: '100%',
@@ -400,7 +402,7 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset }: SettingsPane
             if (presetName.trim()) e.currentTarget.style.background = 'var(--accent)';
           }}
         >
-          Save Custom Preset
+          {t.panel.saveCustom}
         </button>
       </div>
     </div>

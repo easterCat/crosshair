@@ -5,6 +5,7 @@ import { usePresets, useSettings } from './hooks/usePresets';
 import { useHotkeys } from './hooks/useHotkeys';
 import { useTray } from './hooks/useTray';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n, tf } from './i18n';
 import type { CrosshairConfig } from './types/crosshair';
 
 const IS_OVERLAY = new URLSearchParams(window.location.search).has('overlay');
@@ -65,6 +66,7 @@ function CrosshairOverlayContent() {
 }
 
 function SettingsWindow() {
+  const { t, toggleLang, lang } = useI18n();
   const {
     presets, currentPresetId, selectPreset,
     saveCustomPreset, deleteCustomPreset, getCurrentPreset,
@@ -166,7 +168,7 @@ function SettingsWindow() {
               transition: 'all 200ms',
             }} />
             <span style={{ fontSize: 11, fontWeight: 600, color: showCrosshair ? 'var(--status-on)' : 'var(--status-off)' }}>
-              {showCrosshair ? 'ACTIVE' : 'HIDDEN'}
+              {showCrosshair ? t.status.active : t.status.hidden}
             </span>
           </div>
 
@@ -191,7 +193,7 @@ function SettingsWindow() {
                 <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
                   <rect x="1" y="1" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
                 </svg>
-                Hide
+                {t.buttons.hide}
               </>
             ) : (
               <>
@@ -199,7 +201,7 @@ function SettingsWindow() {
                   <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
                   <circle cx="5" cy="5" r="1.2" fill="currentColor"/>
                 </svg>
-                Show
+                {t.buttons.show}
               </>
             )}
           </button>
@@ -225,13 +227,44 @@ function SettingsWindow() {
               e.currentTarget.style.background = 'var(--bg-elevated)';
               e.currentTarget.style.color = 'var(--text-secondary)';
             }}
-            title="Minimize to system tray"
+            title={t.tray.minimizeToTray}
           >
             <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
               <rect x="1" y="7" width="8" height="1.5" rx="0.75" fill="currentColor"/>
               <rect x="1" y="1.5" width="8" height="5.5" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
             </svg>
-            Tray
+            {t.buttons.tray}
+          </button>
+
+          {/* Language toggle */}
+          <button
+            onClick={toggleLang}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 12px',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 99,
+              color: 'var(--text-secondary)',
+              fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              transition: 'all 150ms',
+              letterSpacing: '0.02em',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--bg-overlay)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--bg-elevated)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+            title="Switch language / 切换语言"
+          >
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M1 6h10M6 1C4 3 4 9 6 11M6 1C8 3 8 9 6 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            {lang === 'en' ? '中文' : 'EN'}
           </button>
         </div>
       </header>
@@ -249,12 +282,12 @@ function SettingsWindow() {
           <circle cx="5" cy="5" r="4" stroke="var(--text-muted)" strokeWidth="1"/>
           <path d="M5 3v2.5l1.5 1" stroke="var(--text-muted)" strokeWidth="1" strokeLinecap="round"/>
         </svg>
-        <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>Shortcuts</span>
+        <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>{t.shortcuts.title}</span>
         {[
-          { key: 'F9', label: 'Toggle' },
-          { key: 'F10', label: 'Settings' },
-          { key: 'F11', label: 'Next' },
-          { key: 'F12', label: 'Prev' },
+          { key: 'F9', label: t.shortcuts.toggle },
+          { key: 'F10', label: t.shortcuts.settings },
+          { key: 'F11', label: t.shortcuts.next },
+          { key: 'F12', label: t.shortcuts.prev },
         ].map(({ key, label }) => (
           <span key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <kbd>{key}</kbd>
@@ -272,7 +305,7 @@ function SettingsWindow() {
         gap: 6,
       }}>
         {[
-          { id: 'presets', label: 'Presets', icon: (
+          { id: 'presets', label: t.tabs.presets, icon: (
             <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
               <rect x="1" y="1" width="4" height="4" rx="1" fill="currentColor"/>
               <rect x="7" y="1" width="4" height="4" rx="1" fill="currentColor"/>
@@ -280,7 +313,7 @@ function SettingsWindow() {
               <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
             </svg>
           )},
-          { id: 'customize', label: 'Customize', icon: (
+          { id: 'customize', label: t.tabs.customize, icon: (
             <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/>
               <circle cx="6" cy="6" r="2" fill="currentColor"/>
@@ -328,6 +361,7 @@ function SettingsWindow() {
             onSelect={handleSelectPreset}
             onDelete={deleteCustomPreset}
             onCustomize={() => setActiveTab('customize')}
+            t={t}
           />
         ) : (
           editingConfig && (
@@ -335,6 +369,7 @@ function SettingsWindow() {
               config={editingConfig}
               onChange={handlePresetChange}
               onSaveAsPreset={handleSaveAsPreset}
+              t={t}
             />
           )
         )}
@@ -350,8 +385,8 @@ function SettingsWindow() {
         fontSize: 10, color: 'var(--text-muted)',
         flexShrink: 0,
       }}>
-        <span>{presets.length} presets · Built with Tauri v2</span>
-        <span>macOS · Windows · Linux</span>
+        <span>{tf(t.footer.presetsCount, { count: presets.length })}</span>
+        <span>{t.footer.platforms}</span>
       </footer>
     </div>
   );
@@ -364,9 +399,10 @@ interface PresetViewProps {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onCustomize: () => void;
+  t: ReturnType<typeof useI18n>['t'];
 }
 
-function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize }: PresetViewProps) {
+function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize, t }: PresetViewProps) {
   const builtin = presets.filter(p => p.id.startsWith('builtin'));
   const custom = presets.filter(p => !p.id.startsWith('builtin'));
 
@@ -376,10 +412,10 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize 
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>
-            Built-in
+            {t.presets.builtin}
           </span>
           <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{builtin.length} styles</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{tf(t.presets.stylesCount, { count: builtin.length })}</span>
         </div>
         <div style={{
           display: 'grid',
@@ -392,6 +428,7 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize 
               preset={preset}
               isSelected={preset.id === currentPresetId}
               onSelect={() => onSelect(preset.id)}
+              t={t}
             />
           ))}
         </div>
@@ -400,13 +437,13 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize 
       {/* Custom section */}
       {custom.length > 0 && (
         <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>
-              Custom
-            </span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{custom.length} saved</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>
+            {t.presets.custom}
+          </span>
+          <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{tf(t.presets.savedCount, { count: custom.length })}</span>
+        </div>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
@@ -419,6 +456,7 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize 
                 isSelected={preset.id === currentPresetId}
                 onSelect={() => onSelect(preset.id)}
                 onDelete={() => onDelete(preset.id)}
+                t={t}
               />
             ))}
           </div>
@@ -450,7 +488,7 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize 
           <circle cx="7" cy="7" r="2.5" fill="var(--accent)"/>
           <line x1="7" y1="1" x2="7" y2="4" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
-        <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>Create Custom Preset</span>
+        <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>{t.presets.createCustom}</span>
         <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
           <path d="M3 5h4m0 0L6 3.5M7 5 5.5 6.5" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -465,9 +503,10 @@ interface PresetCardProps {
   isSelected: boolean;
   onSelect: () => void;
   onDelete?: () => void;
+  t: ReturnType<typeof useI18n>['t'];
 }
 
-function PresetCard({ preset, isSelected, onSelect, onDelete }: PresetCardProps) {
+function PresetCard({ preset, isSelected, onSelect, onDelete, t }: PresetCardProps) {
   return (
     <div
       onClick={onSelect}
@@ -542,7 +581,7 @@ function PresetCard({ preset, isSelected, onSelect, onDelete }: PresetCardProps)
             opacity: 0,
             transition: 'opacity 120ms',
           }}
-          title="Delete preset"
+          title={t.presets.deletePreset}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248, 113, 113, 0.4)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(248, 113, 113, 0.2)'; }}
           className="delete-btn"
