@@ -44,7 +44,7 @@ jobs:
           cache: 'npm'
 
       - name: Setup Rust
-        uses: dtolnay/rust-stable@master
+        uses: dtolnay/rust-toolchain@master
         with:
           targets: ${{ matrix.target }}
 
