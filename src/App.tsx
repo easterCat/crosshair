@@ -5,7 +5,7 @@ import { usePresets, useSettings } from './hooks/usePresets';
 import { useHotkeys } from './hooks/useHotkeys';
 import { useTray } from './hooks/useTray';
 import { invoke } from '@tauri-apps/api/core';
-import { useI18n, tf } from './i18n';
+import { useI18n } from './i18n';
 import type { CrosshairConfig } from './types/crosshair';
 
 const IS_OVERLAY = new URLSearchParams(window.location.search).has('overlay');
@@ -385,7 +385,7 @@ function SettingsWindow() {
         fontSize: 10, color: 'var(--text-muted)',
         flexShrink: 0,
       }}>
-        <span>{tf(t.footer.presetsCount, { count: presets.length })}</span>
+        <span>{t.footer.presetsCount.replace('{count}', String(presets.length))}</span>
         <span>{t.footer.platforms}</span>
       </footer>
     </div>
@@ -415,7 +415,9 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize,
             {t.presets.builtin}
           </span>
           <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{tf(t.presets.stylesCount, { count: builtin.length })}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>
+            {t.presets.stylesCount.replace('{count}', String(builtin.length))}
+          </span>
         </div>
         <div style={{
           display: 'grid',
@@ -442,7 +444,9 @@ function PresetView({ presets, currentPresetId, onSelect, onDelete, onCustomize,
             {t.presets.custom}
           </span>
           <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{tf(t.presets.savedCount, { count: custom.length })}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>
+            {t.presets.savedCount.replace('{count}', String(custom.length))}
+          </span>
         </div>
           <div style={{
             display: 'grid',
