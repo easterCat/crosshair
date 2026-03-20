@@ -106,11 +106,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/bundles-*.dmg
-            artifacts/**/bundles-*.exe
-            artifacts/**/bundles-*.msi
-            artifacts/**/bundles-*.deb
-            artifacts/**/bundles-*.AppImage
+            artifacts/**/bundle/dmg/*.dmg
+            artifacts/**/bundle/macos/*.app
+            artifacts/**/bundle/*/*.exe
+            artifacts/**/bundle/deb/*.deb
+            artifacts/**/bundle/appimage/*.AppImage
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
