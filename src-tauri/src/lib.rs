@@ -76,11 +76,11 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
     .focused(false)
     .visible(true)
     .build()
-    .map_err(|e| e.to_string())?;
+    .map_err(|e: tauri::Error| e.to_string())?;
 
     overlay
         .set_ignore_cursor_events(true)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: tauri::Error| e.to_string())?;
 
     Ok(())
 }
