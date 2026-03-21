@@ -192,6 +192,23 @@ async fn minimize_to_tray(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Exit the application completely.
+#[tauri::command]
+async fn exit_app(app: AppHandle) -> Result<(), String> {
+    log::info!("Exiting application...");
+    // Close the crosshair overlay window first
+    if let Some(overlay) = app.get_webview_window("crosshair-layer") {
+        let _ = overlay.close();
+    }
+    // Close the main settings window
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.close();
+    }
+    // Exit the app
+    app.exit(0);
+    Ok(())
+}
+
 /// Register a global shortcut.
 #[tauri::command]
 async fn register_shortcut(app: AppHandle, shortcut: String, action: String) -> Result<(), String> {
@@ -260,11 +277,27 @@ pub fn run() {
             show_settings,
             hide_settings,
             minimize_to_tray,
+            exit_app,
             register_shortcut,
             get_primary_monitor,
             emit_preset_update,
         ])
         .setup(|app| {
+            // Handle main window close event - exit the entire app
+            let app_handle = app.handle().clone();
+            let main_window = app.get_webview_window("main").unwrap();
+            main_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    log::info!("Main window close requested - exiting application");
+                    // Close crosshair overlay window first
+                    if let Some(overlay) = app_handle.get_webview_window("crosshair-layer") {
+                        let _ = overlay.close();
+                    }
+                    // Exit the application
+                    app_handle.exit(0);
+                }
+            });
+
             // Setup system tray using JS menu API (programmatic tray setup)
             // Tray setup is handled in the frontend via @tauri-apps/api/tray
             log::info!("CrosshairOverlay setup started");

@@ -36,9 +36,12 @@ export function useTray({ onShowSettings, onToggleCrosshair }: UseTrayOptions) {
         const quitItem = await MenuItem.new({
           id: 'quit',
           text: 'Quit',
-          action: () => {
-            invoke('hide_settings').catch(() => {});
-            setTimeout(() => window.close(), 100);
+          action: async () => {
+            try {
+              await invoke('exit_app');
+            } catch (e) {
+              console.error('Failed to exit:', e);
+            }
           },
         });
 
