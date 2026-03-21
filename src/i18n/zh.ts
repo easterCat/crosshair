@@ -1,7 +1,7 @@
 export const zh = {
   app: {
     title: 'CrosshairOverlay',
-    version: 'v0.1.0',
+    version: 'v1.0.0',
     tagline: '轻量级游戏准星悬浮窗',
   },
   status: {

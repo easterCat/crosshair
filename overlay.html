@@ -5,19 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CrosshairOverlay</title>
     <style>
+      /* Reset all backgrounds to transparent */
       html, body {
-        margin: 0;
-        padding: 0;
-        width: 100vw;
-        height: 100vh;
-        background: transparent;
-        overflow: hidden;
-        pointer-events: none;
+        background: transparent !important;
+        background-color: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden !important;
       }
+      /* Reset everything */
+      *, *::before, *::after {
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      /* Container */
       #root {
-        width: 100vw;
-        height: 100vh;
-        background: transparent;
+        width: 100vw !important;
+        height: 100vh !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      /* Canvas */
+      canvas {
+        display: block !important;
+        background: transparent !important;
+        image-rendering: crisp-edges;
+      }
+      /* Windows WebView specific */
+      _:-ms-fullscreen, :root #root {
+        background: transparent !important;
+      }
+      /* Webkit for older browsers */
+      @supports (-webkit-appearance: none) {
+        body, html, #root {
+          -webkit-background-composite: clear;
+        }
       }
     </style>
   </head>

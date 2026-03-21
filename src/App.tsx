@@ -147,7 +147,7 @@ function SettingsWindow() {
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}
               data-tauri-drag-region>CrosshairOverlay</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>v0.1.0</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>v1.0.0</div>
           </div>
         </div>
 

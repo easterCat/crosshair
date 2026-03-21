@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { TrayIcon } from '@tauri-apps/api/tray';
 import { Menu, MenuItem } from '@tauri-apps/api/menu';
 import { invoke } from '@tauri-apps/api/core';
+import { defaultWindowIcon } from '@tauri-apps/api/app';
 
 interface UseTrayOptions {
   onShowSettings: () => void;
@@ -36,9 +37,12 @@ export function useTray({ onShowSettings, onToggleCrosshair }: UseTrayOptions) {
         const quitItem = await MenuItem.new({
           id: 'quit',
           text: 'Quit',
-          action: () => {
-            invoke('hide_settings').catch(() => {});
-            setTimeout(() => window.close(), 100);
+          action: async () => {
+            try {
+              await invoke('exit_app');
+            } catch (e) {
+              console.error('Failed to exit:', e);
+            }
           },
         });
 
@@ -46,10 +50,15 @@ export function useTray({ onShowSettings, onToggleCrosshair }: UseTrayOptions) {
           items: [showItem, toggleItem, quitItem],
         });
 
+        // Get the app icon for tray (may be null on some platforms)
+        const icon = await defaultWindowIcon();
+
         trayInstance = await TrayIcon.new({
           id: 'main-tray',
           menu,
           tooltip: 'CrosshairOverlay',
+          icon: icon ?? undefined,
+          iconAsTemplate: false,
         });
       } catch (e) {
         console.error('Failed to setup tray:', e);
