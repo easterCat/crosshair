@@ -1,7 +1,7 @@
 export const en = {
   app: {
     title: 'CrosshairOverlay',
-    version: 'v0.1.0',
+    version: 'v1.0.0',
     tagline: 'Lightweight crosshair overlay for games',
   },
   status: {

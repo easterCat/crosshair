@@ -3,17 +3,33 @@
    Must override index.css / tailwind preflight
    which sets html,body,#root{background:var(--bg-base)}.
    =================================================== */
-*, *::before, *::after {
-  background: transparent !important;
+* {
   box-sizing: border-box;
 }
 
-html, body {
+*, *::before, *::after {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+html {
   margin: 0 !important;
   padding: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   background: transparent !important;
+  background-color: transparent !important;
+  overflow: hidden !important;
+  border: none !important;
+}
+
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  background-color: transparent !important;
   overflow: hidden !important;
   pointer-events: none !important;
   border: none !important;
@@ -23,7 +39,9 @@ html, body {
   width: 100vw !important;
   height: 100vh !important;
   background: transparent !important;
+  background-color: transparent !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  pointer-events: none !important;
 }

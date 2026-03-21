@@ -11,17 +11,34 @@ import { load } from '@tauri-apps/plugin-store';
 
 const STORE_FILE = 'settings.json';
 
-// Detect which window we are in via URL param (?overlay=true)
-const IS_OVERLAY = new URLSearchParams(window.location.search).has('overlay');
-
 export function CrosshairOverlayApp() {
-  const [config, setConfig] = useState<CrosshairConfig>(BUILTIN_PRESETS[0]);
+  const [config, setConfig] = useState<CrosshairConfig | null>(null);
   const [visible, setVisible] = useState(true);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!IS_OVERLAY) return;
+    // Force transparent background on all elements
+    const setTransparent = () => {
+      document.documentElement.style.background = 'transparent';
+      document.documentElement.style.backgroundColor = 'transparent';
+      document.body.style.background = 'transparent';
+      document.body.style.backgroundColor = 'transparent';
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.background = 'transparent';
+        root.style.backgroundColor = 'transparent';
+      }
+    };
+    
+    setTransparent();
 
-    (async () => {
+    // Configure window for transparency via Tauri API
+    import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
+      const win = getCurrentWindow();
+      
+      // Load saved settings
       try {
         const store = await load(STORE_FILE, { autoSave: false, defaults: {} });
         const savedId = await store.get<string>('currentPresetId');
@@ -35,23 +52,60 @@ export function CrosshairOverlayApp() {
           const custom = await store.get<CrosshairConfig[]>('customPresets');
           const all = [...BUILTIN_PRESETS, ...(custom ?? [])];
           const found = all.find(p => p.id === savedId);
-          if (found) setConfig(found);
+          if (found) {
+            setConfig(found);
+          } else {
+            setConfig(BUILTIN_PRESETS[0]);
+          }
+        } else {
+          setConfig(BUILTIN_PRESETS[0]);
+        }
+        setIsReady(true);
+        
+        // Show window once content is ready, but only if visible
+        if (savedSettings?.showCrosshair !== false) {
+          setTimeout(() => {
+            win.show().catch(() => {});
+          }, 150);
         }
       } catch (e) {
-        // Use defaults
+        // Use defaults on error
+        setConfig(BUILTIN_PRESETS[0]);
+        setIsReady(true);
+        
+        setTimeout(() => {
+          win.show().catch(() => {});
+        }, 150);
       }
-    })();
+    });
 
     // Listen for preset change events
     import('@tauri-apps/api/event').then(({ listen }) => {
-      listen<{ config: CrosshairConfig }>('overlay-update', (event) => {
-        setConfig(event.payload.config);
+      listen<CrosshairConfig>('overlay-update', (event) => {
+        setConfig(event.payload);
       });
-    });
+      
+      listen('hotkey-toggle', () => {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('toggle_crosshair').catch(() => {});
+        });
+      });
+    }).catch(() => {});
   }, []);
 
-  if (!IS_OVERLAY) return null;
-  if (!visible) return null;
+  // Always render transparent container to avoid black screen
+  if (!visible || !config || !isReady) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'transparent',
+          pointerEvents: 'none',
+        }}
+      />
+    );
+  }
 
   return (
     <div
