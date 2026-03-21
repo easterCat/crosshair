@@ -55,8 +55,7 @@ impl Default for CrosshairConfig {
 }
 
 /// Create the transparent overlay window for the crosshair display.
-#[tauri::command]
-async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
+async fn create_crosshair_window_internal(app: AppHandle) -> Result<(), String> {
     if CROSSHAIR_WINDOW_CREATED.swap(true, Ordering::SeqCst) {
         return Ok(());
     }
@@ -73,7 +72,7 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
     .skip_taskbar(true)
     .resizable(false)
     .focused(false)
-    .visible(false)
+    .visible(true)  // Start as visible to ensure it shows up
     .build()
     .map_err(|e: tauri::Error| e.to_string())?;
 
@@ -128,38 +127,102 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
     // Windows: Set WebView2 background to transparent using webview2-com
     #[cfg(target_os = "windows")]
     {
-        use std::sync::Mutex;
-        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Controller;
-        
+        // Use a simple approach to force WebView2 transparency
         let overlay_clone = overlay.clone();
         std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-            unsafe {
-                if let Ok(hwnd) = overlay_clone.hwnd() {
-                    let hwnd_raw = hwnd.0 as *mut std::ffi::c_void;
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            
+            // Try to set window transparency using Windows API
+            if let Ok(hwnd) = overlay_clone.hwnd() {
+                unsafe {
+                    let hwnd_raw = hwnd.0 as isize;
                     
-                    // Create WebView2 Environment
-                    if let Ok((env, _)) = webview2_com::run_async("https://www.example.com", || {
-                        Ok(webview2_com::IWebView::create_webview(hwnd_raw, true))
-                    }) {
-                        if let Some(controller) = env.controller() {
-                            // Get the corewebview2
-                            if let Ok(core) = controller.CoreWebView2() {
-                                // Set default background color to transparent (0 alpha)
-                                let _ = core.DefaultBackgroundColor(
-                                    webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_COLOR {
-                                        R: 0, G: 0, B: 0, A: 0
-                                    }
-                                );
-                            }
-                        }
+                    // Remove window borders and force transparency
+                    let user32 = winapi::um::libloaderapi::GetModuleHandleA(b"user32\0".as_ptr() as *const i8);
+                    if !user32.is_null() {
+                        // Set window to layered but NOT transparent (so crosshair is visible)
+                        let mut ex_style = winapi::um::winuser::GetWindowLongPtrW(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            winapi::um::winuser::GWL_EXSTYLE as i32
+                        );
+                        ex_style |= (winapi::um::winuser::WS_EX_LAYERED as isize);
+                        // Remove WS_EX_TRANSPARENT to make crosshair visible
+                        ex_style &= !(winapi::um::winuser::WS_EX_TRANSPARENT as isize);
+                        ex_style &= !(winapi::um::winuser::WS_EX_CLIENTEDGE as isize);
+                        ex_style &= !(winapi::um::winuser::WS_EX_STATICEDGE as isize);
+                        ex_style &= !(winapi::um::winuser::WS_EX_WINDOWEDGE as isize);
+                        winapi::um::winuser::SetWindowLongPtrW(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            winapi::um::winuser::GWL_EXSTYLE as i32,
+                            ex_style
+                        );
+
+                        // Remove standard window borders and title bar
+                        let mut style = winapi::um::winuser::GetWindowLongPtrW(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            winapi::um::winuser::GWL_STYLE as i32
+                        );
+                        style &= !(winapi::um::winuser::WS_CAPTION as isize);
+                        style &= !(winapi::um::winuser::WS_THICKFRAME as isize);
+                        style &= !(winapi::um::winuser::WS_BORDER as isize);
+                        style &= !(winapi::um::winuser::WS_DLGFRAME as isize);
+                        style &= !(winapi::um::winuser::WS_SIZEBOX as isize);
+                        style |= winapi::um::winuser::WS_POPUP as isize;
+                        winapi::um::winuser::SetWindowLongPtrW(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            winapi::um::winuser::GWL_STYLE as i32,
+                            style
+                        );
+                        
+                        // Force window update to apply changes
+                        winapi::um::winuser::SetWindowPos(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            std::ptr::null_mut(),
+                            0, 0, 0, 0,
+                            winapi::um::winuser::SWP_NOMOVE | winapi::um::winuser::SWP_NOSIZE | winapi::um::winuser::SWP_NOZORDER | winapi::um::winuser::SWP_FRAMECHANGED
+                        );
+                        
+                        // Set transparent color key (black) - only black becomes transparent
+                        type SetLayeredWindowAttributesFn = unsafe extern "system" fn(
+                            winapi::shared::windef::HWND,
+                            winapi::shared::windef::COLORREF,
+                            u8,
+                            u32
+                        ) -> winapi::shared::minwindef::BOOL;
+                        
+                        let set_layered_window_attributes: SetLayeredWindowAttributesFn = 
+                            std::mem::transmute(winapi::um::libloaderapi::GetProcAddress(
+                                user32,
+                                b"SetLayeredWindowAttributes\0".as_ptr() as *const i8
+                            ));
+                        
+                        set_layered_window_attributes(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            0x000000, // Black - only this color becomes transparent
+                            255,
+                            winapi::um::winuser::LWA_COLORKEY
+                        );
                     }
                 }
             }
         });
+        
+        log::info!("Windows overlay window created with enhanced transparency settings");
+    }
+
+    // Set initial visibility state
+    let is_visible = CROSSHAIR_VISIBLE.load(Ordering::SeqCst);
+    if !is_visible {
+        let _ = overlay.hide();
     }
 
     Ok(())
+}
+
+/// Create the transparent overlay window for the crosshair display (Tauri command).
+#[tauri::command]
+async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
+    create_crosshair_window_internal(app).await
 }
 
 /// Show or hide the crosshair overlay window.
@@ -223,10 +286,59 @@ async fn hide_settings(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn minimize_to_tray(app: AppHandle) -> Result<(), String> {
     if let Some(main) = app.get_webview_window("main") {
-        // Use hide() to minimize to tray without closing
-        // The tray icon provides the only way to restore the window
-        main.hide().map_err(|e| e.to_string())?;
-        log::info!("Window minimized to tray");
+        // Ensure window is visible in taskbar
+        main.set_skip_taskbar(false).map_err(|e| e.to_string())?;
+        
+        // Minimize the window
+        main.minimize().map_err(|e| e.to_string())?;
+        
+        // Force window to appear in taskbar
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(hwnd) = main.hwnd() {
+                unsafe {
+                    let hwnd_raw = hwnd.0 as isize;
+                    let user32 = winapi::um::libloaderapi::GetModuleHandleA(b"user32\0".as_ptr() as *const i8);
+                    if !user32.is_null() {
+                        // Ensure window has taskbar flag
+                        let mut ex_style = winapi::um::winuser::GetWindowLongPtrW(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            winapi::um::winuser::GWL_EXSTYLE as i32
+                        );
+                        ex_style &= !(winapi::um::winuser::WS_EX_TOOLWINDOW as isize);
+                        ex_style |= winapi::um::winuser::WS_EX_APPWINDOW as isize;
+                        winapi::um::winuser::SetWindowLongPtrW(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            winapi::um::winuser::GWL_EXSTYLE as i32,
+                            ex_style
+                        );
+                        
+                        // Force window update
+                        winapi::um::winuser::SetWindowPos(
+                            hwnd_raw as winapi::shared::windef::HWND,
+                            std::ptr::null_mut(),
+                            0, 0, 0, 0,
+                            winapi::um::winuser::SWP_NOMOVE | winapi::um::winuser::SWP_NOSIZE | winapi::um::winuser::SWP_NOZORDER | winapi::um::winuser::SWP_FRAMECHANGED
+                        );
+                    }
+                }
+            }
+        }
+        
+        log::info!("Window minimized to tray (visible in taskbar)");
+    }
+    Ok(())
+}
+
+/// Restore window from minimized state
+#[tauri::command]
+async fn restore_from_tray(app: AppHandle) -> Result<(), String> {
+    if let Some(main) = app.get_webview_window("main") {
+        // Show and unminimize the window
+        main.unminimize().map_err(|e| e.to_string())?;
+        main.show().map_err(|e| e.to_string())?;
+        main.set_focus().map_err(|e| e.to_string())?;
+        log::info!("Window restored from tray");
     }
     Ok(())
 }
@@ -323,6 +435,7 @@ pub fn run() {
             show_settings,
             hide_settings,
             minimize_to_tray,
+            restore_from_tray,
             exit_app,
             register_shortcut,
             get_primary_monitor,
@@ -347,7 +460,7 @@ pub fn run() {
             let app_handle_clone = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-                if let Err(e) = create_crosshair_window(app_handle_clone).await {
+                if let Err(e) = create_crosshair_window_internal(app_handle_clone).await {
                     log::error!("Failed to create crosshair window: {}", e);
                 }
             });

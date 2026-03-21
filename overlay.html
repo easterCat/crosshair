@@ -7,23 +7,29 @@
     <style>
       /* Reset all backgrounds to transparent */
       html, body {
-        background: transparent !important;
-        background-color: transparent !important;
+        background: rgba(0, 0, 0, 0) !important;
+        background-color: rgba(0, 0, 0, 0) !important;
         margin: 0 !important;
         padding: 0 !important;
         width: 100vw !important;
         height: 100vh !important;
         overflow: hidden !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
       }
       /* Reset everything */
       *, *::before, *::after {
         margin: 0 !important;
         padding: 0 !important;
         box-sizing: border-box !important;
-        background: transparent !important;
-        background-color: transparent !important;
+        background: rgba(0, 0, 0, 0) !important;
+        background-color: rgba(0, 0, 0, 0) !important;
         border: none !important;
+        outline: none !important;
         box-shadow: none !important;
+        border-style: none !important;
+        border-width: 0 !important;
       }
       /* Container */
       #root {
@@ -35,22 +41,66 @@
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        background: rgba(0, 0, 0, 0) !important;
+        background-color: rgba(0, 0, 0, 0) !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
       }
       /* Canvas */
       canvas {
         display: block !important;
-        background: transparent !important;
+        background: rgba(0, 0, 0, 0) !important;
+        background-color: rgba(0, 0, 0, 0) !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
         image-rendering: crisp-edges;
       }
-      /* Windows WebView specific */
-      _:-ms-fullscreen, :root #root {
-        background: transparent !important;
+      /* Windows WebView specific - force transparency */
+      body {
+        background: rgba(0, 0, 0, 0) !important;
+        background-color: rgba(0, 0, 0, 0) !important;
+        -webkit-app-region: no-drag;
       }
-      /* Webkit for older browsers */
-      @supports (-webkit-appearance: none) {
-        body, html, #root {
-          -webkit-background-composite: clear;
-        }
+      /* Remove any possible borders and shadows */
+      * {
+        border: 0 !important;
+        border-style: none !important;
+        border-width: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+      }
+      /* Force transparency for all elements */
+      html, body, div, span, applet, object, iframe,
+      h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+      a, abbr, acronym, address, big, cite, code,
+      del, dfn, em, img, ins, kbd, q, s, samp,
+      small, strike, strong, sub, sup, tt, var,
+      b, u, i, center,
+      dl, dt, dd, ol, ul, li,
+      fieldset, form, label, legend,
+      table, caption, tbody, tfoot, thead, tr, th, td,
+      article, aside, canvas, details, embed, 
+      figure, figcaption, footer, header, hgroup, 
+      menu, nav, output, ruby, section, summary,
+      time, mark, audio, video {
+        background: rgba(0, 0, 0, 0) !important;
+        background-color: rgba(0, 0, 0, 0) !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+      }
+      /* Remove scrollbar */
+      ::-webkit-scrollbar {
+        display: none !important;
+      }
+      html {
+        overflow: hidden !important;
       }
     </style>
   </head>

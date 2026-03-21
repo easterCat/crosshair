@@ -16,8 +16,8 @@
       {
         "label": "main",
         "title": "CrosshairOverlay",
-      "width": 960,
-      "height": 640,
+      "width": 1024,
+      "height": 768,
       "minWidth": 480,
       "minHeight": 400,
         "resizable": true,
