@@ -81,6 +81,14 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         .set_ignore_cursor_events(true)
         .map_err(|e: tauri::Error| e.to_string())?;
 
+    // Windows: set WebView2 background color to transparent.
+    // On Windows 8+, alpha=0 is required for the transparency to take effect.
+    #[cfg(target_os = "windows")]
+    {
+        use tauri::window::Color;
+        let _ = overlay.set_background_color(Color { r: 0, g: 0, b: 0, a: 0 });
+    }
+
     // macOS: use fullscreen for best transparency support
     #[cfg(target_os = "macos")]
     {
@@ -125,8 +133,7 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         });
     }
 
-    // Windows: WebView2 transparency is handled by Tauri via .transparent(true)
-    // No additional configuration needed - the overlay.html uses CSS for crosshair display
+    // Windows: WebView2 background color is set to transparent via set_background_color above
 
     Ok(())
 }
@@ -188,13 +195,13 @@ async fn hide_settings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Minimize to system tray - keeps window in taskbar but hidden from view
+/// Minimize to system tray - keeps taskbar icon visible.
 #[tauri::command]
 async fn minimize_to_tray(app: AppHandle) -> Result<(), String> {
     if let Some(main) = app.get_webview_window("main") {
-        // Use hide() to minimize to tray without closing
-        // The tray icon provides the only way to restore the window
-        main.hide().map_err(|e| e.to_string())?;
+        // Use minimize() instead of hide() so the taskbar icon remains visible on Windows.
+        // hide() removes the window from the taskbar entirely.
+        main.minimize().map_err(|e| e.to_string())?;
         log::info!("Window minimized to tray");
     }
     Ok(())
