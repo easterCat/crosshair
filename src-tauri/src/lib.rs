@@ -89,6 +89,45 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         let _ = overlay.set_background_color(Some(Color(0, 0, 0, 0)));
     }
 
+    // Windows: make the entire window layer transparent to avoid black border
+    // around the WebView2 content area. SetLayeredWindowAttributes with
+    // LWA_COLORKEY makes the given color (black=0) fully transparent,
+    // so the window chrome becomes invisible too.
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetWindowLongPtrW, SetLayeredWindowAttributes, LWA_COLORKEY, GWL_EXSTYLE,
+        };
+        use windows::Win32::UI::WindowsAndMessaging::WS_EX_LAYERED;
+
+        let overlay_clone = overlay.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            unsafe {
+                if let Ok(hwnd_val) = overlay_clone.hwnd() {
+                    let hwnd = HWND(hwnd_val.0 as *mut std::ffi::c_void);
+
+                    // Ensure WS_EX_LAYERED is set on the window
+                    let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+                    if ex_style & WS_EX_LAYERED.0 == 0 {
+                        use windows::Win32::UI::WindowsAndMessaging::SetWindowLongPtrW;
+                        let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, (ex_style | WS_EX_LAYERED.0) as isize);
+                    }
+
+                    // Make black pixels transparent — the crosshair itself is not black
+                    // so it stays visible; everything else (border / chrome) vanishes.
+                    let _ = SetLayeredWindowAttributes(
+                        hwnd,
+                        windows::Win32::Foundation::COLORREF(0),
+                        0,
+                        LWA_COLORKEY,
+                    );
+                }
+            }
+        });
+    }
+
     // macOS: use fullscreen for best transparency support
     #[cfg(target_os = "macos")]
     {
