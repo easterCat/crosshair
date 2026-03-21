@@ -134,9 +134,10 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset, t }: SettingsP
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
       gap: 16,
       width: '100%',
+      minHeight: 0,
     }}>
       {/* ── Preview ─────────────────────────────────────── */}
       <div style={{
@@ -152,7 +153,7 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset, t }: SettingsP
       }}>
         <div style={{
           width: '100%',
-          maxWidth: 280,
+          maxWidth: 200,
           aspectRatio: '1',
           borderRadius: 16,
           border: '1px solid var(--border-default)',
@@ -169,10 +170,10 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset, t }: SettingsP
             position: 'absolute', inset: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <CrosshairCanvas config={config} width={280} height={280} />
+            <CrosshairCanvas config={config} width={200} height={200} />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
           <span style={{
             fontSize: 14, fontWeight: 700,
             color: 'var(--text-primary)',
@@ -199,8 +200,8 @@ export function SettingsPanel({ config, onChange, onSaveAsPreset, t }: SettingsP
       >
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
-          gap: 8,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))',
+          gap: 6,
         }}>
           {STYLES.map(style => {
             const isActive = config.style === style.value;

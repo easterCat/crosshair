@@ -17,33 +17,26 @@ export function CrosshairOverlayApp() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Always run in overlay mode since this component is only used in overlay.html
-
-    // Ensure body and root are transparent immediately
-    document.documentElement.style.background = 'transparent';
-    document.documentElement.style.backgroundColor = 'transparent';
-    document.body.style.background = 'transparent';
-    document.body.style.backgroundColor = 'transparent';
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    const root = document.getElementById('root');
-    if (root) {
-      root.style.background = 'transparent';
-      root.style.backgroundColor = 'transparent';
-    }
+    // Force transparent background on all elements
+    const setTransparent = () => {
+      document.documentElement.style.background = 'transparent';
+      document.documentElement.style.backgroundColor = 'transparent';
+      document.body.style.background = 'transparent';
+      document.body.style.backgroundColor = 'transparent';
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.background = 'transparent';
+        root.style.backgroundColor = 'transparent';
+      }
+    };
     
-    // Also set on the html element
-    const html = document.documentElement;
-    html.style.background = 'transparent';
-    html.style.backgroundColor = 'transparent';
+    setTransparent();
 
     // Configure window for transparency via Tauri API
     import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
       const win = getCurrentWindow();
-      
-      // Set window drag region for better UX (optional)
-      // Note: We can't actually set transparent background here,
-      // but we can ensure the window is configured correctly
       
       // Load saved settings
       try {
@@ -71,7 +64,6 @@ export function CrosshairOverlayApp() {
         
         // Show window once content is ready, but only if visible
         if (savedSettings?.showCrosshair !== false) {
-          // Small delay to ensure rendering is complete
           setTimeout(() => {
             win.show().catch(() => {});
           }, 150);
@@ -81,7 +73,6 @@ export function CrosshairOverlayApp() {
         setConfig(BUILTIN_PRESETS[0]);
         setIsReady(true);
         
-        // Show window even on error, but with delay
         setTimeout(() => {
           win.show().catch(() => {});
         }, 150);
@@ -94,19 +85,15 @@ export function CrosshairOverlayApp() {
         setConfig(event.payload);
       });
       
-      // Listen for visibility toggle
       listen('hotkey-toggle', () => {
         import('@tauri-apps/api/core').then(({ invoke }) => {
           invoke('toggle_crosshair').catch(() => {});
         });
       });
-    }).catch(() => {
-      // Ignore import errors
-    });
+    }).catch(() => {});
   }, []);
 
   // Always render transparent container to avoid black screen
-  // Even when not visible or config not ready, render transparent div
   if (!visible || !config || !isReady) {
     return (
       <div

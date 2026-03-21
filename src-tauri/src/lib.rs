@@ -132,6 +132,15 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         });
     }
 
+    // Windows: Set WebView2 background to transparent
+    #[cfg(target_os = "windows")]
+    {
+        use tauri::Webview;
+        // WebView2 默认是深色背景，需要设置为透明
+        // This is handled by the transparent window setting above
+        // Additional WebView2 specific handling would require platform-specific code
+    }
+
     Ok(())
 }
 
