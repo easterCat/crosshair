@@ -56,6 +56,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script type="module">
+      // Set WebView2 background to transparent from inside the webview.
+      // This is the most reliable place to set it — WebView2 itself picks it up.
+      import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+      getCurrentWebviewWindow().setBackgroundColor([0, 0, 0, 0]).catch(() => {});
+    </script>
     <script type="module" src="/src/overlay-entry.tsx"></script>
   </body>
 </html>

@@ -81,72 +81,9 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         .set_ignore_cursor_events(true)
         .map_err(|e: tauri::Error| e.to_string())?;
 
-    // Windows: set WebView2 background color to transparent.
-    // On Windows 8+, alpha=0 is required for the transparency to take effect.
-    #[cfg(target_os = "windows")]
-    {
-        use tauri::window::Color;
-        let _ = overlay.set_background_color(Some(Color(0, 0, 0, 0)));
-    }
-
-    // Windows: make the entire window layer transparent to avoid black border
-    // around the WebView2 content area. SetLayeredWindowAttributes with
-    // LWA_COLORKEY makes the given color (black=0) fully transparent,
-    // so the window chrome becomes invisible too.
-    #[cfg(target_os = "windows")]
-    {
-        use windows::Win32::Foundation::HWND;
-        use windows::Win32::UI::WindowsAndMessaging::{
-            GetWindowLongPtrW, SetLayeredWindowAttributes, LWA_COLORKEY, GWL_EXSTYLE,
-        };
-        use windows::Win32::UI::WindowsAndMessaging::WS_EX_LAYERED;
-
-        let overlay_clone = overlay.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-            unsafe {
-                if let Ok(hwnd_val) = overlay_clone.hwnd() {
-                    let hwnd = HWND(hwnd_val.0 as *mut std::ffi::c_void);
-
-                    // Ensure WS_EX_LAYERED is set on the window
-                    let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
-                    if ex_style & WS_EX_LAYERED.0 == 0 {
-                        use windows::Win32::UI::WindowsAndMessaging::SetWindowLongPtrW;
-                        let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, (ex_style | WS_EX_LAYERED.0) as isize);
-                    }
-
-                    // Make black pixels transparent — the crosshair itself is not black
-                    // so it stays visible; everything else (border / chrome) vanishes.
-                    let _ = SetLayeredWindowAttributes(
-                        hwnd,
-                        windows::Win32::Foundation::COLORREF(0),
-                        0,
-                        LWA_COLORKEY,
-                    );
-                }
-            }
-        });
-    }
-
-    // macOS: use fullscreen for best transparency support
-    #[cfg(target_os = "macos")]
-    {
-        overlay.set_fullscreen(true).map_err(|e: tauri::Error| e.to_string())?;
-    }
-
-    // Non-macOS: position window to cover primary monitor
-    #[cfg(not(target_os = "macos"))]
-    {
-        use tauri::{PhysicalPosition, PhysicalSize};
-        if let Ok(monitor) = overlay.current_monitor() {
-            if let Some(monitor) = monitor {
-                let size = monitor.size();
-                let pos = monitor.position();
-                let _ = overlay.set_position(PhysicalPosition::new(pos.x, pos.y));
-                let _ = overlay.set_size(PhysicalSize::new(size.width, size.height));
-            }
-        }
-    }
+    // Windows: WebView2 background color is set to transparent via set_background_color.
+    // The most reliable way is from inside the webview itself (see overlay.html).
+    // We also reinforce it in set_crosshair_visible when the window is shown.
 
     // Set window background to transparent on macOS using objc2
     #[cfg(target_os = "macos")]
@@ -183,6 +120,13 @@ async fn set_crosshair_visible(app: AppHandle, visible: bool) -> Result<(), Stri
     if let Some(overlay) = app.get_webview_window("crosshair-layer") {
         if visible {
             overlay.show().map_err(|e| e.to_string())?;
+            // Windows: ensure WebView2 background stays transparent every time shown.
+            // The WebView2 runtime may reset this on show.
+            #[cfg(target_os = "windows")]
+            {
+                use tauri::window::Color;
+                let _ = overlay.set_background_color(Some(Color(0, 0, 0, 0)));
+            }
         } else {
             overlay.hide().map_err(|e| e.to_string())?;
         }

@@ -34,6 +34,8 @@
     "core:window:allow-is-minimized",
     "core:window:allow-set-resizable",
     "core:window:allow-request-user-attention",
+    "core:window:allow-set-background-color",
+    "core:webview:default",
     "core:tray:default",
     "core:menu:default",
     "core:event:default",
