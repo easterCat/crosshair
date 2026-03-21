@@ -167,9 +167,18 @@ async fn toggle_crosshair(app: AppHandle) -> Result<bool, String> {
 #[tauri::command]
 async fn show_settings(app: AppHandle) -> Result<(), String> {
     if let Some(main) = app.get_webview_window("main") {
+        // Restore and show the window
         main.show().map_err(|e| e.to_string())?;
-        main.set_focus().map_err(|e| e.to_string())?;
+        // Unminimize if minimized
         main.unminimize().map_err(|e| e.to_string())?;
+        // Request user attention to flash taskbar (Windows)
+        main.request_user_attention(Some(tauri::UserAttentionType::Informational))
+            .map_err(|e| e.to_string())?;
+        // Set focus
+        main.set_focus().map_err(|e| e.to_string())?;
+        log::info!("Settings window shown");
+    } else {
+        log::warn!("Main window not found");
     }
     Ok(())
 }
