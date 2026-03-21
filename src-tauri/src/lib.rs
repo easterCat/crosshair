@@ -54,62 +54,100 @@ impl Default for CrosshairConfig {
     }
 }
 
-/// Create the transparent overlay window for the crosshair display.
-#[tauri::command]
-async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
+/// Create and show the crosshair overlay window.
+/// Call this during setup — NOT delayed — so the window is ready before user clicks "show".
+async fn create_and_show_overlay(app: AppHandle) -> Result<(), String> {
     if CROSSHAIR_WINDOW_CREATED.swap(true, Ordering::SeqCst) {
         return Ok(());
     }
 
-    let overlay = WebviewWindowBuilder::new(
-        &app,
-        "crosshair-layer",
-        WebviewUrl::App("overlay.html".into()),
-    )
-    .title("CrosshairOverlay")
-    .decorations(false)
-    .transparent(true)
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .resizable(false)
-    .focused(false)
-    .visible(false)
-    .build()
-    .map_err(|e: tauri::Error| e.to_string())?;
+    // --- Build the overlay window (initially hidden) ---
+    let overlay = WebviewWindowBuilder::new(&app, "crosshair-layer", WebviewUrl::App("overlay.html".into()))
+        .title("CrosshairOverlay")
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .focused(false)
+        .visible(false)
+        .build()
+        .map_err(|e: tauri::Error| e.to_string())?;
 
     overlay
         .set_ignore_cursor_events(true)
         .map_err(|e: tauri::Error| e.to_string())?;
 
-    // Windows: WebView2 background color is set to transparent via set_background_color.
-    // The most reliable way is from inside the webview itself (see overlay.html).
-    // We also reinforce it in set_crosshair_visible when the window is shown.
+    // --- Position the overlay to cover the primary monitor ---
+    if let Ok(monitor) = overlay.current_monitor() {
+        if let Some(monitor) = monitor {
+            use tauri::{PhysicalPosition, PhysicalSize};
+            let _ = overlay.set_position(PhysicalPosition::new(monitor.position().x, monitor.position().y));
+            let _ = overlay.set_size(PhysicalSize::new(monitor.size().width, monitor.size().height));
+        }
+    }
 
-    // Set window background to transparent on macOS using objc2
-    #[cfg(target_os = "macos")]
+    // --- Windows: set LWA_ALPHA before first show to eliminate black border ---
+    #[cfg(target_os = "windows")]
     {
-        use objc2::{msg_send, class};
-        
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SetLayeredWindowAttributes, GetWindowLongPtrW, SetWindowLongPtrW,
+            GWL_EXSTYLE, WS_EX_LAYERED, LWA_ALPHA,
+        };
+        use windows::core::PCWSTR;
+
         let overlay_clone = overlay.clone();
         std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(300));
+            // Wait for WebView2 to finish initializing
+            std::thread::sleep(std::time::Duration::from_millis(600));
+
             unsafe {
-                if let Ok(ns_window_ptr) = overlay_clone.ns_window() {
-                    let ns_window = ns_window_ptr as *mut objc2::runtime::AnyObject;
-                    if !ns_window.is_null() {
-                        let _: () = msg_send![ns_window, setOpaque: false as bool];
-                        let clear_color: *mut objc2::runtime::AnyObject = msg_send![class!(NSColor), clearColor];
-                        if !clear_color.is_null() {
-                            let _: () = msg_send![ns_window, setBackgroundColor: clear_color];
-                        }
-                        let _: () = msg_send![ns_window, display];
+                if let Ok(hwnd_val) = overlay_clone.hwnd() {
+                    let hwnd = HWND(hwnd_val.0 as *mut std::ffi::c_void);
+
+                    // Add WS_EX_LAYERED if not already present
+                    let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+                    if ex_style & WS_EX_LAYERED.0 == 0 {
+                        let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, (ex_style | WS_EX_LAYERED.0) as isize);
                     }
+
+                    // Show the window — WebView2 renders into the layered surface
+                    overlay_clone.show().ok();
+
+                    // LWA_ALPHA=0 makes every pixel alpha=0 → fully transparent.
+                    // The canvas body is transparent so the crosshair is the only
+                    // thing visible; all WebView2 chrome / window border disappears.
+                    let _ = SetLayeredWindowAttributes(hwnd, PCWSTR::null(), 0, LWA_ALPHA);
                 }
             }
         });
     }
 
-    // Windows: WebView2 background color is set to transparent via set_background_color above
+    // --- macOS: configure NSWindow transparency then show ---
+    #[cfg(target_os = "macos")]
+    {
+        use objc2::{msg_send, class};
+
+        let overlay_clone = overlay.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            unsafe {
+                if let Ok(ns_window_ptr) = overlay_clone.ns_window() {
+                    let ns_window = ns_window_ptr as *mut objc2::runtime::AnyObject;
+                    if !ns_window.is_null() {
+                        let _: () = msg_send![ns_window, setOpaque: false as bool];
+                        let clear_color: *mut objc2::runtime::AnyObject =
+                            msg_send![class!(NSColor), clearColor];
+                        if !clear_color.is_null() {
+                            let _: () = msg_send![ns_window, setBackgroundColor: clear_color];
+                        }
+                    }
+                }
+            }
+            overlay_clone.show().ok();
+        });
+    }
 
     Ok(())
 }
@@ -119,17 +157,21 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
 async fn set_crosshair_visible(app: AppHandle, visible: bool) -> Result<(), String> {
     if let Some(overlay) = app.get_webview_window("crosshair-layer") {
         if visible {
-            overlay.show().map_err(|e| e.to_string())?;
-            // Windows: ensure WebView2 background stays transparent every time shown.
-            // The WebView2 runtime may reset this on show.
-            #[cfg(target_os = "windows")]
-            {
-                use tauri::window::Color;
-                let _ = overlay.set_background_color(Some(Color(0, 0, 0, 0)));
+            // Ensure the overlay covers the current primary monitor (in case it changed)
+            if let Ok(monitor) = overlay.current_monitor() {
+                if let Some(monitor) = monitor {
+                    use tauri::{PhysicalPosition, PhysicalSize};
+                    let _ = overlay.set_position(PhysicalPosition::new(monitor.position().x, monitor.position().y));
+                    let _ = overlay.set_size(PhysicalSize::new(monitor.size().width, monitor.size().height));
+                }
             }
+            overlay.show().map_err(|e| e.to_string())?;
         } else {
             overlay.hide().map_err(|e| e.to_string())?;
         }
+    } else {
+        // Window not created yet — create it now (first time showing)
+        create_and_show_overlay(app).await?;
     }
     CROSSHAIR_VISIBLE.store(visible, Ordering::SeqCst);
     Ok(())
@@ -303,10 +345,10 @@ pub fn run() {
 
             log::info!("CrosshairOverlay setup started");
 
+            // Create overlay window synchronously so it is ready before user clicks "show".
             let app_handle_clone = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-                if let Err(e) = create_crosshair_window(app_handle_clone).await {
+                if let Err(e) = create_and_show_overlay(app_handle_clone).await {
                     log::error!("Failed to create crosshair window: {}", e);
                 }
             });

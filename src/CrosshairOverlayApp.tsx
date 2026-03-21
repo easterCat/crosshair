@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { CrosshairCanvas } from './components/CrosshairCanvas';
 import type { CrosshairConfig } from './types/crosshair';
 import { BUILTIN_PRESETS } from './types/crosshair';
-import { load } from '@tauri-apps/plugin-store';
 
 const STORE_FILE = 'settings.json';
 
@@ -31,16 +30,13 @@ export function CrosshairOverlayApp() {
         root.style.backgroundColor = 'transparent';
       }
     };
-    
+
     setTransparent();
 
-    // Configure window for transparency via Tauri API
-    import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
-      const win = getCurrentWindow();
-      
-      // Load saved settings
+    // Load saved settings from store
+    import('@tauri-apps/plugin-store').then(async ({ load: storeLoad }) => {
       try {
-        const store = await load(STORE_FILE, { autoSave: false, defaults: {} });
+        const store = await storeLoad(STORE_FILE, { autoSave: false, defaults: {} });
         const savedId = await store.get<string>('currentPresetId');
         const savedSettings = await store.get<{ showCrosshair: boolean }>('settings');
 
@@ -52,31 +48,14 @@ export function CrosshairOverlayApp() {
           const custom = await store.get<CrosshairConfig[]>('customPresets');
           const all = [...BUILTIN_PRESETS, ...(custom ?? [])];
           const found = all.find(p => p.id === savedId);
-          if (found) {
-            setConfig(found);
-          } else {
-            setConfig(BUILTIN_PRESETS[0]);
-          }
+          setConfig(found ?? BUILTIN_PRESETS[0]);
         } else {
           setConfig(BUILTIN_PRESETS[0]);
         }
-        setIsReady(true);
-        
-        // Show window once content is ready, but only if visible
-        if (savedSettings?.showCrosshair !== false) {
-          setTimeout(() => {
-            win.show().catch(() => {});
-          }, 150);
-        }
-      } catch (e) {
-        // Use defaults on error
+      } catch {
         setConfig(BUILTIN_PRESETS[0]);
-        setIsReady(true);
-        
-        setTimeout(() => {
-          win.show().catch(() => {});
-        }, 150);
       }
+      setIsReady(true);
     });
 
     // Listen for preset change events
@@ -84,7 +63,7 @@ export function CrosshairOverlayApp() {
       listen<CrosshairConfig>('overlay-update', (event) => {
         setConfig(event.payload);
       });
-      
+
       listen('hotkey-toggle', () => {
         import('@tauri-apps/api/core').then(({ invoke }) => {
           invoke('toggle_crosshair').catch(() => {});
@@ -93,8 +72,22 @@ export function CrosshairOverlayApp() {
     }).catch(() => {});
   }, []);
 
-  // Always render transparent container to avoid black screen
-  if (!visible || !config || !isReady) {
+  // Always render a transparent container so the window background is clean
+  // even before config/visibility state is ready.
+  if (!config || !isReady) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'transparent',
+          pointerEvents: 'none',
+        }}
+      />
+    );
+  }
+
+  if (!visible) {
     return (
       <div
         style={{
