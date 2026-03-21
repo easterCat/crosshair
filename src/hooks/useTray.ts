@@ -50,14 +50,14 @@ export function useTray({ onShowSettings, onToggleCrosshair }: UseTrayOptions) {
           items: [showItem, toggleItem, quitItem],
         });
 
-        // Get the app icon for tray
+        // Get the app icon for tray (may be null on some platforms)
         const icon = await defaultWindowIcon();
 
         trayInstance = await TrayIcon.new({
           id: 'main-tray',
           menu,
           tooltip: 'CrosshairOverlay',
-          icon,
+          icon: icon ?? undefined,
           iconAsTemplate: false,
         });
       } catch (e) {
