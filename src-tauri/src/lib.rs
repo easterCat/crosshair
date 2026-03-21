@@ -125,39 +125,8 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         });
     }
 
-    // Windows: Set WebView2 background to transparent using webview2-com
-    #[cfg(target_os = "windows")]
-    {
-        use std::sync::Mutex;
-        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Controller;
-        
-        let overlay_clone = overlay.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-            unsafe {
-                if let Ok(hwnd) = overlay_clone.hwnd() {
-                    let hwnd_raw = hwnd.0 as *mut std::ffi::c_void;
-                    
-                    // Create WebView2 Environment
-                    if let Ok((env, _)) = webview2_com::run_async("https://www.example.com", || {
-                        Ok(webview2_com::IWebView::create_webview(hwnd_raw, true))
-                    }) {
-                        if let Some(controller) = env.controller() {
-                            // Get the corewebview2
-                            if let Ok(core) = controller.CoreWebView2() {
-                                // Set default background color to transparent (0 alpha)
-                                let _ = core.DefaultBackgroundColor(
-                                    webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_COLOR {
-                                        R: 0, G: 0, B: 0, A: 0
-                                    }
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
+    // Windows: WebView2 transparency is handled by Tauri via .transparent(true)
+    // No additional configuration needed - the overlay.html uses CSS for crosshair display
 
     Ok(())
 }
