@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { CrosshairConfig, CrosshairStyle } from '../types/crosshair';
 import { CrosshairCanvas } from './CrosshairCanvas';
 import type { Translations } from '../i18n';
@@ -39,63 +39,164 @@ interface SettingsPanelProps {
 export function SettingsPanel({ config, onChange, onSaveAsPreset, t }: SettingsPanelProps) {
   const [presetName, setPresetName] = useState('');
 
-  // Slider component for consistent look
+  // Enhanced Slider with +/- buttons and direct input
   const Slider = ({
     label, value, min, max, step = 1, unit = '',
     onChange, decimal = false,
   }: {
     label: string; value: number; min: number; max: number; step?: number; unit?: string;
     onChange: (v: number) => void; decimal?: boolean;
-  }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-        <span style={{
-          fontSize: 11, fontWeight: 700, color: 'var(--accent)',
-          fontVariantNumeric: 'tabular-nums',
-          fontFamily: 'ui-monospace, monospace',
-          background: 'var(--accent-muted)',
-          padding: '3px 8px', borderRadius: 6,
-          letterSpacing: '-0.02em',
-          minWidth: 48,
-          textAlign: 'center',
-        }}>
-          {decimal ? value.toFixed(1) : value}{unit}
-        </span>
-      </div>
-      <div style={{
-        position: 'relative',
-        height: 6,
-        background: 'var(--bg-surface)',
-        borderRadius: 3,
-        overflow: 'hidden',
-      }}>
+  }) => {
+    const [inputValue, setInputValue] = useState(String(decimal ? value.toFixed(1) : value));
+    const sliderRef = useRef<HTMLInputElement>(null);
+
+    // Sync input when value changes externally
+    useEffect(() => {
+      setInputValue(decimal ? value.toFixed(1) : String(value));
+    }, [value, decimal]);
+
+    const handleInputChange = (newValue: number) => {
+      const clamped = Math.max(min, Math.min(max, newValue));
+      onChange(decimal ? Math.round(clamped * 10) / 10 : Math.round(clamped));
+    };
+
+    const handleTextChange = (text: string) => {
+      setInputValue(text);
+      const num = parseFloat(text);
+      if (!isNaN(num)) {
+        handleInputChange(num);
+      }
+    };
+
+    const handleBlur = () => {
+      const num = parseFloat(inputValue);
+      if (isNaN(num)) {
+        setInputValue(decimal ? value.toFixed(1) : String(value));
+      } else {
+        handleInputChange(num);
+        setInputValue(decimal ? value.toFixed(1) : String(value));
+      }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleBlur();
+        (e.target as HTMLInputElement).blur();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        handleInputChange(value + step);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        handleInputChange(value - step);
+      }
+    };
+
+    const increment = () => handleInputChange(value + step);
+    const decrement = () => handleInputChange(value - step);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={decrement}
+              disabled={value <= min}
+              style={{
+                width: 22, height: 22, borderRadius: 6,
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                color: value <= min ? 'var(--text-muted)' : 'var(--text-secondary)',
+                cursor: value <= min ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 700, lineHeight: 1,
+                transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { if (value > min) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; }}
+            >
+              −
+            </button>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={e => handleTextChange(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              style={{
+                width: 52,
+                textAlign: 'center',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 6,
+                padding: '4px 4px',
+                color: 'var(--text-primary)',
+                fontSize: 12,
+                fontFamily: 'ui-monospace, monospace',
+                fontWeight: 600,
+              }}
+            />
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: -2 }}>{unit}</span>
+            <button
+              onClick={increment}
+              disabled={value >= max}
+              style={{
+                width: 22, height: 22, borderRadius: 6,
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                color: value >= max ? 'var(--text-muted)' : 'var(--text-secondary)',
+                cursor: value >= max ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 700, lineHeight: 1,
+                transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { if (value < max) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; }}
+            >
+              +
+            </button>
+          </div>
+        </div>
         <div style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          height: '100%',
-          width: `${((value - min) / (max - min)) * 100}%`,
-          background: 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
-          borderRadius: 3,
-          transition: 'width 50ms',
-        }} />
-        <input
-          type="range" min={min} max={max} step={step} value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          style={{
+          position: 'relative',
+          height: 8,
+          background: 'var(--bg-surface)',
+          borderRadius: 4,
+          overflow: 'hidden',
+        }}>
+          <div style={{
             position: 'absolute',
-            inset: 0,
-            width: '100%',
+            left: 0,
+            top: 0,
             height: '100%',
-            opacity: 0,
-            cursor: 'pointer',
-            margin: 0,
-          }}
-        />
+            width: `${((value - min) / (max - min)) * 100}%`,
+            background: 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
+            borderRadius: 4,
+            transition: 'width 50ms',
+          }} />
+          <input
+            ref={sliderRef}
+            type="range" min={min} max={max} step={step} value={value}
+            onChange={e => onChange(decimal ? parseFloat(e.target.value) : Number(e.target.value))}
+            onWheel={e => {
+              e.preventDefault();
+              const delta = e.deltaY > 0 ? -step : step;
+              handleInputChange(value + delta);
+            }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+              margin: 0,
+            }}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Section card wrapper
   const Section = ({ title, icon, children, gridArea }: {

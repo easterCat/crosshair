@@ -108,23 +108,16 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         
         let overlay_clone = overlay.clone();
         std::thread::spawn(move || {
-            // Small delay to ensure window is fully created
             std::thread::sleep(std::time::Duration::from_millis(300));
             unsafe {
                 if let Ok(ns_window_ptr) = overlay_clone.ns_window() {
                     let ns_window = ns_window_ptr as *mut objc2::runtime::AnyObject;
                     if !ns_window.is_null() {
-                        // Call setOpaque_(NO) using raw objc
                         let _: () = msg_send![ns_window, setOpaque: false as bool];
-                        
-                        // Get clearColor
                         let clear_color: *mut objc2::runtime::AnyObject = msg_send![class!(NSColor), clearColor];
                         if !clear_color.is_null() {
-                            // Set background color to clear
                             let _: () = msg_send![ns_window, setBackgroundColor: clear_color];
                         }
-                        
-                        // Force redraw
                         let _: () = msg_send![ns_window, display];
                     }
                 }
@@ -132,13 +125,38 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         });
     }
 
-    // Windows: Set WebView2 background to transparent
+    // Windows: Set WebView2 background to transparent using webview2-com
     #[cfg(target_os = "windows")]
     {
-        use tauri::Webview;
-        // WebView2 默认是深色背景，需要设置为透明
-        // This is handled by the transparent window setting above
-        // Additional WebView2 specific handling would require platform-specific code
+        use std::sync::Mutex;
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Controller;
+        
+        let overlay_clone = overlay.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            unsafe {
+                if let Ok(hwnd) = overlay_clone.hwnd() {
+                    let hwnd_raw = hwnd.0 as *mut std::ffi::c_void;
+                    
+                    // Create WebView2 Environment
+                    if let Ok((env, _)) = webview2_com::run_async("https://www.example.com", || {
+                        Ok(webview2_com::IWebView::create_webview(hwnd_raw, true))
+                    }) {
+                        if let Some(controller) = env.controller() {
+                            // Get the corewebview2
+                            if let Ok(core) = controller.CoreWebView2() {
+                                // Set default background color to transparent (0 alpha)
+                                let _ = core.DefaultBackgroundColor(
+                                    webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_COLOR {
+                                        R: 0, G: 0, B: 0, A: 0
+                                    }
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
     Ok(())
@@ -201,11 +219,14 @@ async fn hide_settings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Minimize to system tray.
+/// Minimize to system tray - keeps window in taskbar but hidden from view
 #[tauri::command]
 async fn minimize_to_tray(app: AppHandle) -> Result<(), String> {
     if let Some(main) = app.get_webview_window("main") {
+        // Use hide() to minimize to tray without closing
+        // The tray icon provides the only way to restore the window
         main.hide().map_err(|e| e.to_string())?;
+        log::info!("Window minimized to tray");
     }
     Ok(())
 }
@@ -214,15 +235,12 @@ async fn minimize_to_tray(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn exit_app(app: AppHandle) -> Result<(), String> {
     log::info!("Exiting application...");
-    // Close the crosshair overlay window first
     if let Some(overlay) = app.get_webview_window("crosshair-layer") {
         let _ = overlay.close();
     }
-    // Close the main settings window
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.close();
     }
-    // Exit the app
     app.exit(0);
     Ok(())
 }
@@ -287,6 +305,16 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
+        // Single instance plugin - prevents multiple instances
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // When a second instance is launched, focus the main window
+            log::info!("Another instance was launched, focusing main window");
+            if let Some(main) = app.get_webview_window("main") {
+                let _ = main.show();
+                let _ = main.unminimize();
+                let _ = main.set_focus();
+            }
+        }))
         .invoke_handler(tauri::generate_handler![
             create_crosshair_window,
             set_crosshair_visible,
@@ -301,30 +329,25 @@ pub fn run() {
             emit_preset_update,
         ])
         .setup(|app| {
-            // Handle main window close event - exit the entire app
             let app_handle = app.handle().clone();
             let main_window = app.get_webview_window("main").unwrap();
+            
             main_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
                     log::info!("Main window close requested - exiting application");
-                    // Close crosshair overlay window first
                     if let Some(overlay) = app_handle.get_webview_window("crosshair-layer") {
                         let _ = overlay.close();
                     }
-                    // Exit the application
                     app_handle.exit(0);
                 }
             });
 
-            // Setup system tray using JS menu API (programmatic tray setup)
-            // Tray setup is handled in the frontend via @tauri-apps/api/tray
             log::info!("CrosshairOverlay setup started");
 
-            // Create the crosshair overlay window after a short delay
-            let app_handle = app.handle().clone();
+            let app_handle_clone = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-                if let Err(e) = create_crosshair_window(app_handle).await {
+                if let Err(e) = create_crosshair_window(app_handle_clone).await {
                     log::error!("Failed to create crosshair window: {}", e);
                 }
             });
