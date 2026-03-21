@@ -67,20 +67,39 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
         WebviewUrl::App("overlay.html".into()),
     )
     .title("CrosshairOverlay")
-    .fullscreen(true)
     .decorations(false)
     .transparent(true)
     .always_on_top(true)
     .skip_taskbar(true)
     .resizable(false)
     .focused(false)
-    .visible(false) // Start hidden, show after content loads
+    .visible(false)
     .build()
     .map_err(|e: tauri::Error| e.to_string())?;
 
     overlay
         .set_ignore_cursor_events(true)
         .map_err(|e: tauri::Error| e.to_string())?;
+
+    // macOS: use fullscreen for best transparency support
+    #[cfg(target_os = "macos")]
+    {
+        overlay.set_fullscreen(true).map_err(|e: tauri::Error| e.to_string())?;
+    }
+
+    // Non-macOS: position window to cover primary monitor
+    #[cfg(not(target_os = "macos"))]
+    {
+        use tauri::{PhysicalPosition, PhysicalSize};
+        if let Ok(monitor) = overlay.current_monitor() {
+            if let Some(monitor) = monitor {
+                let size = monitor.size();
+                let pos = monitor.position();
+                let _ = overlay.set_position(PhysicalPosition::new(pos.x, pos.y));
+                let _ = overlay.set_size(PhysicalSize::new(size.width, size.height));
+            }
+        }
+    }
 
     // Set window background to transparent on macOS using objc2
     #[cfg(target_os = "macos")]
@@ -112,12 +131,6 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
             }
         });
     }
-
-    #[cfg(not(target_os = "macos"))]
-    let _ = overlay;
-
-    // Window will be shown by the frontend once content is ready
-    // This prevents black screen flash on startup
 
     Ok(())
 }
