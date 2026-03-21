@@ -74,13 +74,50 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
     .skip_taskbar(true)
     .resizable(false)
     .focused(false)
-    .visible(true)
+    .visible(false) // Start hidden, show after content loads
     .build()
     .map_err(|e: tauri::Error| e.to_string())?;
 
     overlay
         .set_ignore_cursor_events(true)
         .map_err(|e: tauri::Error| e.to_string())?;
+
+    // Set window background to transparent on macOS using objc2
+    #[cfg(target_os = "macos")]
+    {
+        use objc2::{msg_send, class};
+        
+        let overlay_clone = overlay.clone();
+        std::thread::spawn(move || {
+            // Small delay to ensure window is fully created
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            unsafe {
+                if let Ok(ns_window_ptr) = overlay_clone.ns_window() {
+                    let ns_window = ns_window_ptr as *mut objc2::runtime::AnyObject;
+                    if !ns_window.is_null() {
+                        // Call setOpaque_(NO) using raw objc
+                        let _: () = msg_send![ns_window, setOpaque: false as bool];
+                        
+                        // Get clearColor
+                        let clear_color: *mut objc2::runtime::AnyObject = msg_send![class!(NSColor), clearColor];
+                        if !clear_color.is_null() {
+                            // Set background color to clear
+                            let _: () = msg_send![ns_window, setBackgroundColor: clear_color];
+                        }
+                        
+                        // Force redraw
+                        let _: () = msg_send![ns_window, display];
+                    }
+                }
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    let _ = overlay;
+
+    // Window will be shown by the frontend once content is ready
+    // This prevents black screen flash on startup
 
     Ok(())
 }
