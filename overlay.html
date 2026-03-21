@@ -57,10 +57,31 @@
   <body>
     <div id="root"></div>
     <script type="module">
-      // Set WebView2 background to transparent from inside the webview.
-      // This is the most reliable place to set it — WebView2 itself picks it up.
+      // Set WebView2 background to transparent AFTER the window is initialized.
+      // This is the most reliable place — WebView2 itself processes it.
+      // We use the "initialized" event to ensure the window is fully ready.
       import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-      getCurrentWebviewWindow().setBackgroundColor([0, 0, 0, 0]).catch(() => {});
+
+      async function setTransparentBackground() {
+        try {
+          await getCurrentWebviewWindow().setBackgroundColor([0, 0, 0, 0]);
+        } catch (e) {
+          // Fallback: retry after short delay in case initialized fired before listener setup
+          setTimeout(async () => {
+            try {
+              await getCurrentWebviewWindow().setBackgroundColor([0, 0, 0, 0]);
+            } catch {}
+          }, 200);
+        }
+      }
+
+      // Listen for the initialized event (fires once when window is ready)
+      getCurrentWebviewWindow().once('initialized', () => {
+        setTransparentBackground();
+      });
+
+      // Also try immediately in case it's already initialized
+      setTransparentBackground();
     </script>
     <script type="module" src="/src/overlay-entry.tsx"></script>
   </body>
