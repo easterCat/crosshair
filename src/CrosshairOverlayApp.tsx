@@ -11,11 +11,6 @@ import { load } from '@tauri-apps/plugin-store';
 
 const STORE_FILE = 'settings.json';
 
-// Detect overlay window by checking if we're in overlay.html
-// Since overlay-entry.tsx is only loaded by overlay.html, we're always in overlay mode here
-const IS_OVERLAY = window.location.pathname.includes('overlay.html') || 
-                   window.location.href.includes('overlay.html');
-
 export function CrosshairOverlayApp() {
   const [config, setConfig] = useState<CrosshairConfig | null>(null);
   const [visible, setVisible] = useState(true);
