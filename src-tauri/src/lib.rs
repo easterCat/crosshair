@@ -86,7 +86,7 @@ async fn create_crosshair_window(app: AppHandle) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         use tauri::window::Color;
-        let _ = overlay.set_background_color(Color { r: 0, g: 0, b: 0, a: 0 });
+        let _ = overlay.set_background_color(Some(Color(0, 0, 0, 0)));
     }
 
     // macOS: use fullscreen for best transparency support
